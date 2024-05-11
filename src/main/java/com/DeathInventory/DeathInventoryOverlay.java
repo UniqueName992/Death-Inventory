@@ -1,6 +1,5 @@
 package com.DeathInventory;
-import java.awt.Dimension;
-import java.awt.Graphics2D;
+import java.awt.*;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import javax.inject.Inject;
@@ -88,9 +87,10 @@ public class DeathInventoryOverlay extends OverlayPanel{
             }
 
             // put a placeholder image so each item is aligned properly and the panel is not resized
+
             panelComponent.getChildren().add(PLACEHOLDER_IMAGE);
         }
-
+        panelComponent.setBackgroundColor(new Color(168, 42, 30, 128));
         return super.render(graphics);
     }
 

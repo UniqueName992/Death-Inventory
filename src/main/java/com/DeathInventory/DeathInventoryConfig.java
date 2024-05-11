@@ -35,16 +35,9 @@ public interface DeathInventoryConfig extends Config
 	default showInBankEnum showInBank() { return showInBankEnum.Once; }
 
 	@ConfigItem(
-			keyName = "alwaysShow",
-			name = "Always show",
-			description = "Show the inventory display of what you had when you died always. Overrides other options"
-	) default boolean alwaysShow() { return false; }
-
-
-	@ConfigItem(
 			keyName = "toggleKeybind",
 			name = "Key Always Show",
-			description = "Binds a key (combination) to toggle always showing the inventory display."
+			description = "Binds a key (combination) to toggle showing the death inventory display."
 	)
 	default Keybind toggleKeybind()	{ return Keybind.NOT_SET; }
 }

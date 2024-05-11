@@ -2,6 +2,7 @@ package com.DeathInventory;
 import java.awt.*;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
 import javax.inject.Inject;
 import net.runelite.api.*;
 import net.runelite.client.config.ConfigManager;
@@ -12,7 +13,8 @@ import net.runelite.client.ui.overlay.components.ComponentOrientation;
 import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.api.widgets.ComponentID;
 
-public class DeathInventoryOverlay extends OverlayPanel{
+public class DeathInventoryOverlay extends OverlayPanel {
+    private static final int INVENTORY_SIZE = 28;
     private static final ImageComponent PLACEHOLDER_IMAGE = new ImageComponent(
             new BufferedImage(Constants.ITEM_SPRITE_WIDTH, Constants.ITEM_SPRITE_HEIGHT, BufferedImage.TYPE_4BYTE_ABGR));
 
@@ -20,6 +22,7 @@ public class DeathInventoryOverlay extends OverlayPanel{
     private final ItemManager itemManager;
     private final ConfigManager configMan;
     private final DeathInventoryConfig config;
+    private boolean toggleHotkey = false;
 
     @Inject
     private DeathInventoryOverlay(Client client, ItemManager itemManager, ConfigManager configMan, DeathInventoryConfig config)
@@ -52,25 +55,28 @@ public class DeathInventoryOverlay extends OverlayPanel{
         return configMan.getConfiguration("Death-Inventory", "state");
     }
 
+    private boolean shouldShow() {
+        // hide after death if configured
+        if (getState().equals("0") && !config.showAfterDeath()) { return false; }
+        // Hide in the bank after death if not showing and not always shown
+        if (config.showInBank().toString().equals("Never") && getState().equals("1")) { return false; }
+        // Hide in the bank always if not showing
+        if (client.getWidget(ComponentID.BANK_CONTAINER) != null &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
+        // Hide in the world always if not showing and not alwyas shown in bank
+        if (client.getWidget(ComponentID.BANK_CONTAINER) == null &&  !config.showAfterBank() && getState().equals("2") ) { return false; }
+        return true;
+    }
+
     @Override
     public Dimension render(Graphics2D graphics) {
         // if bank is open, log the state
-        if (client.getWidget(ComponentID.BANK_CONTAINER) != null && getState().equals("0")) { putState("1"); }
+        if (client.getWidget(ComponentID.BANK_CONTAINER) != null && getState().equals("0")) { putState("1"); toggleHotkey=false;}
 
         // if bank was just open and now closed set state to banked
-        if (client.getWidget(ComponentID.BANK_CONTAINER) == null && getState().equals("1")) { putState("2"); }
+        if (client.getWidget(ComponentID.BANK_CONTAINER) == null && getState().equals("1")) { putState("2"); toggleHotkey=false;}
 
-        // hide after death if configured and not always shown before banking
-        if (getState().equals("0") && !config.showAfterDeath() && !config.alwaysShow()) { return null; }
-
-        // Hide in the bank after death if not showing and not always shown and not alwyas shown in bank
-        if (config.showInBank().toString().equals("Never") && getState().equals("1") && !config.alwaysShow()) { return null; }
-
-        // Hide in the bank always if not showing and not always shown and not alwyas shown in bank
-        if (client.getWidget(ComponentID.BANK_CONTAINER) != null &&  !config.showInBank().toString().equals("Always") && getState().equals("2") && !config.alwaysShow()) { return null; }
-
-        // Hide in the world always if not showing and not always shown and not alwyas shown in bank
-        if (client.getWidget(ComponentID.BANK_CONTAINER) == null &&  !config.showAfterBank() && getState().equals("2") && !config.alwaysShow()) { return null; }
+        // Selective hide depending on state and hotkey toggle
+        if (shouldShow() == toggleHotkey) { return null; }
 
         // Retrieve the inventory when died
         final int[] itemQuantites = fromString(configMan.getConfiguration("Death-Inventory", "itemQuantites"));
@@ -87,7 +93,6 @@ public class DeathInventoryOverlay extends OverlayPanel{
             }
 
             // put a placeholder image so each item is aligned properly and the panel is not resized
-
             panelComponent.getChildren().add(PLACEHOLDER_IMAGE);
         }
         panelComponent.setBackgroundColor(new Color(168, 42, 30, 128));
@@ -95,7 +100,32 @@ public class DeathInventoryOverlay extends OverlayPanel{
     }
 
     public void toggle() {
-        configMan.setConfiguration("Death-Inventory", "alwaysShow", !config.alwaysShow());
+        toggleHotkey = !toggleHotkey;
+    }
+
+    public void onDeath() {
+        final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+        if (itemContainer == null) {
+            return;
+        }
+        final Item[] items = itemContainer.getItems();
+        int[] itemIDs = new int[INVENTORY_SIZE];
+        int[] itemQuantites = new int[INVENTORY_SIZE];
+
+        for (int i = 0; i < INVENTORY_SIZE; i++) {
+            if (i < items.length) {
+                final Item item = items[i];
+
+                if (item.getQuantity() > 0) {
+                    itemIDs[i] = item.getId();
+                    itemQuantites[i] = item.getQuantity();
+                }
+            }
+        }
+        putState("0");
+        configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
+        configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
+        toggleHotkey = false;
     }
 }
 

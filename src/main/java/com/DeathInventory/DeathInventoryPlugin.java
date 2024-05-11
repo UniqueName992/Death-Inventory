@@ -26,7 +26,6 @@ import java.util.Arrays;
 
 public class DeathInventoryPlugin extends Plugin
 {
-	private static final int INVENTORY_SIZE = 28;
 	@Getter
     @Inject
 	private Client client;
@@ -63,28 +62,28 @@ public class DeathInventoryPlugin extends Plugin
 		{
 			Player player = (Player) actor;
 			if (player == client.getLocalPlayer()) {
-				final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
-				if (itemContainer == null) {
-					return;
-				}
-				final Item[] items = itemContainer.getItems();
-				int[] itemIDs = new int[INVENTORY_SIZE];
-				int[] itemQuantites = new int[INVENTORY_SIZE];
-
-				for (int i = 0; i < INVENTORY_SIZE; i++) {
-					if (i < items.length) {
-						final Item item = items[i];
-
-						if (item.getQuantity() > 0) {
-							itemIDs[i] = item.getId();
-							itemQuantites[i] = item.getQuantity();
-						}
-					}
-				}
-				configMan.setConfiguration("Death-Inventory","state", "0");
-				configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
-				configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
-
+//				final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+//				if (itemContainer == null) {
+//					return;
+//				}
+//				final Item[] items = itemContainer.getItems();
+//				int[] itemIDs = new int[INVENTORY_SIZE];
+//				int[] itemQuantites = new int[INVENTORY_SIZE];
+//
+//				for (int i = 0; i < INVENTORY_SIZE; i++) {
+//					if (i < items.length) {
+//						final Item item = items[i];
+//
+//						if (item.getQuantity() > 0) {
+//							itemIDs[i] = item.getId();
+//							itemQuantites[i] = item.getQuantity();
+//						}
+//					}
+//				}
+//				configMan.setConfiguration("Death-Inventory","state", "0");
+//				configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
+//				configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
+				overlay.onDeath();
             }
 		}
 	}

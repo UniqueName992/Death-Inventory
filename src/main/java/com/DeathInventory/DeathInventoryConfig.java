@@ -10,7 +10,7 @@ public interface DeathInventoryConfig extends Config
 {
 	@ConfigItem(
 			keyName = "showAfterDeath",
-			name = "Show after dieing before banking",
+			name = "Show after dying before banking",
 			description = "Show the inventory display of what you had when you died after you have died before you visit the bank."
 	) default boolean showAfterDeath() { return true; }
 

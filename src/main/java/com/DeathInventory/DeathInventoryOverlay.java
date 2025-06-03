@@ -22,7 +22,9 @@ public class DeathInventoryOverlay extends OverlayPanel {
     private final ItemManager itemManager;
     private final ConfigManager configMan;
     private final DeathInventoryConfig config;
-    private boolean toggleHotkey = false;
+    private boolean forceDisplayed = false;
+    private boolean shown = false;
+    private boolean hotKey = false;
 
     @Inject
     private DeathInventoryOverlay(Client client, ItemManager itemManager, ConfigManager configMan, DeathInventoryConfig config)
@@ -77,13 +79,20 @@ public class DeathInventoryOverlay extends OverlayPanel {
     @Override
     public Dimension render(Graphics2D graphics) {
         // if bank is open, log the state
-        if (isBankOpen() && getState().equals("0")) { putState("1"); toggleHotkey=false;}
+        if (isBankOpen() && getState().equals("0")) { putState("1"); }
 
         // if bank was just open and now closed set state to banked
-        if (!isBankOpen() && getState().equals("1")) { putState("2"); toggleHotkey=false;}
+        if (!isBankOpen() && getState().equals("1")) { putState("2"); }
+
+        if (hotKey) {
+            hotKey = false;
+            forceDisplayed = !forceDisplayed;
+            if (forceDisplayed) { shown = !shouldShow(); }
+        }
 
         // Selective hide depending on state and hotkey toggle
-        if (shouldShow() == toggleHotkey) { return null; }
+        if (forceDisplayed && !shown) { return null; }
+        if (!forceDisplayed && !shouldShow()) { return null; }
 
         // Retrieve the inventory when died
         final int[] itemQuantites = fromString(configMan.getConfiguration("Death-Inventory", "itemQuantites"));
@@ -107,7 +116,7 @@ public class DeathInventoryOverlay extends OverlayPanel {
     }
 
     public void toggle() {
-        toggleHotkey = !toggleHotkey;
+        hotKey = true;
     }
 
     public void onDeath() {
@@ -132,7 +141,7 @@ public class DeathInventoryOverlay extends OverlayPanel {
         putState("0");
         configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
         configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
-        toggleHotkey = false;
+        forceDisplayed = false;
     }
 }
 

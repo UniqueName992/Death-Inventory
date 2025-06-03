@@ -61,19 +61,26 @@ public class DeathInventoryOverlay extends OverlayPanel {
         // Hide in the bank after death if not showing and not always shown
         if (config.showInBank().toString().equals("Never") && getState().equals("1")) { return false; }
         // Hide in the bank always if not showing
-        if (client.getWidget(ComponentID.BANK_CONTAINER) != null &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
+        if (isBankOpen() &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
         // Hide in the world always if not showing and not alwyas shown in bank
-        if (client.getWidget(ComponentID.BANK_CONTAINER) == null &&  !config.showAfterBank() && getState().equals("2") ) { return false; }
+        if (!isBankOpen() && !config.showAfterBank() && getState().equals("2") ) { return false; }
         return true;
+    }
+
+    private boolean isBankOpen() {
+        if (client.getWidget(ComponentID.BANK_CONTAINER) == null) {
+            return false;
+        }
+        return !client.getWidget(ComponentID.BANK_CONTAINER).isHidden();
     }
 
     @Override
     public Dimension render(Graphics2D graphics) {
         // if bank is open, log the state
-        if (client.getWidget(ComponentID.BANK_CONTAINER) != null && getState().equals("0")) { putState("1"); toggleHotkey=false;}
+        if (isBankOpen() && getState().equals("0")) { putState("1"); toggleHotkey=false;}
 
         // if bank was just open and now closed set state to banked
-        if (client.getWidget(ComponentID.BANK_CONTAINER) == null && getState().equals("1")) { putState("2"); toggleHotkey=false;}
+        if (!isBankOpen() && getState().equals("1")) { putState("2"); toggleHotkey=false;}
 
         // Selective hide depending on state and hotkey toggle
         if (shouldShow() == toggleHotkey) { return null; }

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.StatChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.input.KeyManager;
@@ -39,6 +40,7 @@ public class DeathInventoryPlugin extends Plugin
 	private OverlayManager overlayManager;
 	@Inject
 	private KeyManager keyManager;
+	private boolean playerDied = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -83,8 +85,18 @@ public class DeathInventoryPlugin extends Plugin
 //				configMan.setConfiguration("Death-Inventory","state", "0");
 //				configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
 //				configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
-				overlay.onDeath();
+				playerDied = true;
             }
+		}
+	}
+
+	@Subscribe
+	public void onStatChanged(StatChanged statChanged) {
+		if (statChanged.getSkill() == Skill.HITPOINTS) {
+			if (statChanged.getBoostedLevel() == 0 && playerDied) {
+				playerDied = false;
+				overlay.onDeath();
+			}
 		}
 	}
 

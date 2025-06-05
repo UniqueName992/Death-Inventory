@@ -94,8 +94,13 @@ public class DeathInventoryPlugin extends Plugin
 	public void onStatChanged(StatChanged statChanged) {
 		if (statChanged.getSkill() == Skill.HITPOINTS) {
 			if (statChanged.getBoostedLevel() == 0 && playerDied) {
-				playerDied = false;
 				overlay.onDeath();
+			}
+			else if (statChanged.getLevel() == statChanged.getBoostedLevel()) {
+				if ( playerDied ) {
+					playerDied = false;
+					overlay.onRespawn();
+				}
 			}
 		}
 	}

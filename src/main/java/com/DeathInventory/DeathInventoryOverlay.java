@@ -25,6 +25,8 @@ public class DeathInventoryOverlay extends OverlayPanel {
     private boolean forceDisplayed = false;
     private boolean shown = false;
     private boolean hotKey = false;
+    private int[] ditemIDs = new int[INVENTORY_SIZE];;
+    private int[] ditemQuantites = new int[INVENTORY_SIZE];;
 
     @Inject
     private DeathInventoryOverlay(Client client, ItemManager itemManager, ConfigManager configMan, DeathInventoryConfig config)
@@ -125,6 +127,27 @@ public class DeathInventoryOverlay extends OverlayPanel {
             return;
         }
         final Item[] items = itemContainer.getItems();
+        ditemIDs = new int[INVENTORY_SIZE];;
+        ditemQuantites = new int[INVENTORY_SIZE];;
+
+        for (int i = 0; i < INVENTORY_SIZE; i++) {
+            if (i < items.length) {
+                final Item item = items[i];
+
+                if (item.getQuantity() > 0) {
+                    ditemIDs[i] = item.getId();
+                    ditemQuantites[i] = item.getQuantity();
+                }
+            }
+        }
+    }
+
+    public void onRespawn() {
+        final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+        if (itemContainer == null) {
+            return;
+        }
+        final Item[] items = itemContainer.getItems();
         int[] itemIDs = new int[INVENTORY_SIZE];
         int[] itemQuantites = new int[INVENTORY_SIZE];
 
@@ -138,10 +161,12 @@ public class DeathInventoryOverlay extends OverlayPanel {
                 }
             }
         }
-        putState("0");
-        configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
-        configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
-        forceDisplayed = false;
+        if (!Arrays.equals(itemIDs, ditemIDs) || !Arrays.equals(itemQuantites, ditemQuantites)) {
+            configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(ditemQuantites));
+            configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(ditemIDs));
+            putState("0");
+            forceDisplayed = false;
+        }
     }
 }
 

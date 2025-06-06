@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.input.KeyManager;
@@ -40,7 +41,13 @@ public class DeathInventoryPlugin extends Plugin
 	private OverlayManager overlayManager;
 	@Inject
 	private KeyManager keyManager;
+	static final int INVENTORY_SIZE = 28;
 	private boolean playerDied = false;
+	boolean forceDisplayed = false;
+	boolean shown = false;
+	boolean hotKey = false;
+	int[] ditemIDs = new int[INVENTORY_SIZE];;
+	int[] ditemQuantites = new int[INVENTORY_SIZE];;
 
 	@Override
 	protected void startUp() throws Exception
@@ -64,27 +71,6 @@ public class DeathInventoryPlugin extends Plugin
 		{
 			Player player = (Player) actor;
 			if (player == client.getLocalPlayer()) {
-//				final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
-//				if (itemContainer == null) {
-//					return;
-//				}
-//				final Item[] items = itemContainer.getItems();
-//				int[] itemIDs = new int[INVENTORY_SIZE];
-//				int[] itemQuantites = new int[INVENTORY_SIZE];
-//
-//				for (int i = 0; i < INVENTORY_SIZE; i++) {
-//					if (i < items.length) {
-//						final Item item = items[i];
-//
-//						if (item.getQuantity() > 0) {
-//							itemIDs[i] = item.getId();
-//							itemQuantites[i] = item.getQuantity();
-//						}
-//					}
-//				}
-//				configMan.setConfiguration("Death-Inventory","state", "0");
-//				configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(itemQuantites));
-//				configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(itemIDs));
 				playerDied = true;
             }
 		}
@@ -94,15 +80,87 @@ public class DeathInventoryPlugin extends Plugin
 	public void onStatChanged(StatChanged statChanged) {
 		if (statChanged.getSkill() == Skill.HITPOINTS) {
 			if (statChanged.getBoostedLevel() == 0 && playerDied) {
-				overlay.onDeath();
+				final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+				if (itemContainer == null) {
+					return;
+				}
+				final Item[] items = itemContainer.getItems();
+				ditemIDs = new int[INVENTORY_SIZE];;
+				ditemQuantites = new int[INVENTORY_SIZE];;
+
+				for (int i = 0; i < INVENTORY_SIZE; i++) {
+					if (i < items.length) {
+						final Item item = items[i];
+
+						if (item.getQuantity() > 0) {
+							ditemIDs[i] = item.getId();
+							ditemQuantites[i] = item.getQuantity();
+						}
+					}
+				}
 			}
 			else if (statChanged.getLevel() == statChanged.getBoostedLevel()) {
 				if ( playerDied ) {
 					playerDied = false;
-					overlay.onRespawn();
+					final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+					if (itemContainer == null) {
+						return;
+					}
+					final Item[] items = itemContainer.getItems();
+					int[] itemIDs = new int[INVENTORY_SIZE];
+					int[] itemQuantites = new int[INVENTORY_SIZE];
+
+					for (int i = 0; i < INVENTORY_SIZE; i++) {
+						if (i < items.length) {
+							final Item item = items[i];
+
+							if (item.getQuantity() > 0) {
+								itemIDs[i] = item.getId();
+								itemQuantites[i] = item.getQuantity();
+							}
+						}
+					}
+					if (!Arrays.equals(itemIDs, ditemIDs) || !Arrays.equals(itemQuantites, ditemQuantites)) {
+						configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(ditemQuantites));
+						configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(ditemIDs));
+						putState("0");
+						forceDisplayed = false;
+					}
 				}
 			}
 		}
+	}
+
+	static int[] fromString(String string) {
+		String[] strings = string.replace("[", "").replace("]", "").split(", ");
+		int[] result = new int[strings.length];
+		for (int i = 0; i < result.length; i++) {
+			result[i] = Integer.parseInt(strings[i]);
+		}
+		return result;
+	}
+
+	void putState(String val) {
+		configMan.setConfiguration("Death-Inventory","state", val);
+	}
+
+	String getState () {
+		return configMan.getConfiguration("Death-Inventory", "state");
+	}
+
+	boolean shouldShow() {
+		if (getState().equals("0") && !config.showAfterDeath()) { return false; }
+		if (config.showInBank().toString().equals("Never") && getState().equals("1")) { return false; }
+		if (isBankOpen() &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
+		if (!isBankOpen() && !config.showAfterBank() && getState().equals("2") ) { return false; }
+		return true;
+	}
+
+	boolean isBankOpen() {
+		if (client.getWidget(ComponentID.BANK_CONTAINER) == null) {
+			return false;
+		}
+		return !client.getWidget(ComponentID.BANK_CONTAINER).isHidden();
 	}
 
 	@Provides
@@ -116,7 +174,7 @@ public class DeathInventoryPlugin extends Plugin
 		@Override
 		public void hotkeyPressed()
 		{
-			overlay.toggle();
+			hotKey = true;;
 		}
 	};
 }

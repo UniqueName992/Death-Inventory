@@ -29,9 +29,6 @@ public class DeathInventoryOverlay extends OverlayPanel {
     @Override
     public Dimension render(Graphics2D graphics) {
 
-        if (plugin.isBankOpen() && plugin.getState().equals("0")) { plugin.putState("1"); }
-        if (!plugin.isBankOpen() && plugin.getState().equals("1")) { plugin.putState("2"); }
-
         if (plugin.hotKey) {
             plugin.hotKey = false;
             plugin.forceDisplayed = !plugin.forceDisplayed;

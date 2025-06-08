@@ -7,7 +7,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.ComponentID;
+import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.events.WidgetClosed;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
@@ -19,6 +22,9 @@ import net.runelite.api.ItemContainer;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.client.util.HotkeyListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
@@ -45,6 +51,7 @@ public class DeathInventoryPlugin extends Plugin
 	private boolean playerDied = false;
 	private int[][] deathItems = new int[2][INVENTORY_SIZE];
 	private int[][] respawnItems = new int[2][INVENTORY_SIZE];
+	private boolean bankOpen = false;
 	static final int INVENTORY_SIZE = 28;
 	ItemContainer itemContainer;
 	int[][] displayItems = new int[2][INVENTORY_SIZE];;
@@ -110,6 +117,22 @@ public class DeathInventoryPlugin extends Plugin
 		}
 	}
 
+	@Subscribe
+	public void onWidgetLoaded(WidgetLoaded event) {
+		if (event.getGroupId() == InterfaceID.BANKMAIN) {
+			if (getState().equals("0")) { putState("1"); }
+			bankOpen = true;
+		}
+	}
+
+	@Subscribe
+	public void onWidgetClosed(WidgetClosed event) {
+		if (event.getGroupId() == InterfaceID.BANKMAIN) {
+			if (getState().equals("1")) { putState("2"); }
+			bankOpen = false;
+		}
+	}
+
 	private int[][] getInv() {
 		itemContainer = client.getItemContainer(InventoryID.INVENTORY);
 		if (itemContainer == null) return null;
@@ -147,16 +170,9 @@ public class DeathInventoryPlugin extends Plugin
 	boolean shouldShow() {
 		if (getState().equals("0") && !config.showAfterDeath()) { return false; }
 		if (config.showInBank().toString().equals("Never") && getState().equals("1")) { return false; }
-		if (isBankOpen() &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
-		if (!isBankOpen() && !config.showAfterBank() && getState().equals("2") ) { return false; }
+		if (bankOpen &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
+		if (!bankOpen && !config.showAfterBank() && getState().equals("2") ) { return false; }
 		return true;
-	}
-
-	boolean isBankOpen() {
-		if (client.getWidget(ComponentID.BANK_CONTAINER) == null) {
-			return false;
-		}
-		return !client.getWidget(ComponentID.BANK_CONTAINER).isHidden();
 	}
 
 	@Provides

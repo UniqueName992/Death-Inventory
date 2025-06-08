@@ -23,9 +23,7 @@ public class DeathInventoryOverlay extends OverlayPanel {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-
-        if (plugin.forceDisplayed && !plugin.shown) { return null; }
-        if (!plugin.forceDisplayed && !plugin.shouldShow()) { return null; }
+        if (!plugin.shown) return null;
 
         for (int i = 0; i < plugin.imageList.length; i++) {
             panelComponent.getChildren().add(plugin.imageList[i]);

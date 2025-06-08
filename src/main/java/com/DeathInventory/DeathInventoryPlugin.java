@@ -12,6 +12,7 @@ import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
@@ -21,9 +22,9 @@ import net.runelite.api.ItemContainer;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.client.util.HotkeyListener;
-
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.Objects;
 
 @Slf4j
 @PluginDescriptor(
@@ -49,10 +50,11 @@ public class DeathInventoryPlugin extends Plugin
 	private int[][] deathItems = new int[2][INVENTORY_SIZE];
 	private int[][] respawnItems = new int[2][INVENTORY_SIZE];
 	private boolean bankOpen = false;
-	static final int INVENTORY_SIZE = 28;
-	ItemContainer itemContainer;
-	int[][] displayItems = new int[2][INVENTORY_SIZE];;
-	boolean forceDisplayed = false;
+	private static final int INVENTORY_SIZE = 28;
+    private int[][] displayItems;
+	private boolean forceDisplayed = false;
+	private boolean wasShown = false;
+	private boolean shouldShow = false;
 	boolean shown = false;
 	ImageComponent[] imageList;
 	@Inject
@@ -109,6 +111,7 @@ public class DeathInventoryPlugin extends Plugin
 				getImageList();
 				putState("0");
 				forceDisplayed = false;
+				shouldShow();
 			}
 		}
 	}
@@ -116,21 +119,30 @@ public class DeathInventoryPlugin extends Plugin
 	@Subscribe
 	public void onWidgetLoaded(WidgetLoaded event) {
 		if (event.getGroupId() == InterfaceID.BANKMAIN) {
-			if (getState().equals("0")) { putState("1"); }
+			if (getState().equals("0")) putState("1");
 			bankOpen = true;
+			shouldShow();
 		}
 	}
 
 	@Subscribe
 	public void onWidgetClosed(WidgetClosed event) {
 		if (event.getGroupId() == InterfaceID.BANKMAIN) {
-			if (getState().equals("1")) { putState("2"); }
+			if (getState().equals("1")) putState("2");
 			bankOpen = false;
+			shouldShow();
+		}
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event) {
+		if (Objects.equals(event.getGroup(), "Death-Inventory")) {
+			shouldShow();
 		}
 	}
 
 	private int[][] getInv() {
-		itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+        ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
 		if (itemContainer == null) return null;
 		Item[] itemsArray = itemContainer.getItems();
 		int[][] items = new int[2][INVENTORY_SIZE];
@@ -155,6 +167,10 @@ public class DeathInventoryPlugin extends Plugin
 		}
 	}
 
+	private void forceShow() {
+        shown = (!forceDisplayed || wasShown) && (forceDisplayed || shouldShow);
+	}
+
 	void putState(String val) {
 		configMan.setConfiguration("Death-Inventory","state", val);
 	}
@@ -163,12 +179,12 @@ public class DeathInventoryPlugin extends Plugin
 		return configMan.getConfiguration("Death-Inventory", "state");
 	}
 
-	boolean shouldShow() {
-		if (getState().equals("0") && !config.showAfterDeath()) { return false; }
-		if (config.showInBank().toString().equals("Never") && getState().equals("1")) { return false; }
-		if (bankOpen &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) { return false; }
-		if (!bankOpen && !config.showAfterBank() && getState().equals("2") ) { return false; }
-		return true;
+	void shouldShow() {
+		if (getState().equals("0") && !config.showAfterDeath()) shouldShow = false;
+		else if (config.showInBank().toString().equals("Never") && getState().equals("1")) shouldShow =  false;
+		else if (bankOpen &&  !config.showInBank().toString().equals("Always") && getState().equals("2")) shouldShow =  false;
+		else shouldShow = bankOpen || config.showAfterBank() || !getState().equals("2");
+		forceShow();
 	}
 
 	@Provides
@@ -183,7 +199,8 @@ public class DeathInventoryPlugin extends Plugin
 		public void hotkeyPressed()
 		{
 			forceDisplayed = !forceDisplayed;
-			if (forceDisplayed) shown = !shouldShow();
+			if (forceDisplayed) wasShown = !shouldShow;
+			forceShow();
 		}
 	};
 }

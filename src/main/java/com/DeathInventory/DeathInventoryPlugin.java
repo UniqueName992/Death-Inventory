@@ -10,15 +10,16 @@ import net.runelite.api.events.StatChanged;
 import net.runelite.api.widgets.ComponentID;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.client.ui.overlay.OverlayManager;
-
+import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.client.util.HotkeyListener;
-
+import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 @Slf4j
@@ -41,19 +42,34 @@ public class DeathInventoryPlugin extends Plugin
 	private OverlayManager overlayManager;
 	@Inject
 	private KeyManager keyManager;
-	static final int INVENTORY_SIZE = 28;
 	private boolean playerDied = false;
+	private int[][] deathItems = new int[2][INVENTORY_SIZE];
+	private int[][] respawnItems = new int[2][INVENTORY_SIZE];
+	static final int INVENTORY_SIZE = 28;
+	ItemContainer itemContainer;
+	int[][] displayItems = new int[2][INVENTORY_SIZE];;
 	boolean forceDisplayed = false;
 	boolean shown = false;
 	boolean hotKey = false;
-	int[] ditemIDs = new int[INVENTORY_SIZE];;
-	int[] ditemQuantites = new int[INVENTORY_SIZE];;
+	ImageComponent[] imageList;
+	@Inject
+	private ItemManager itemManager;
 
 	@Override
 	protected void startUp() throws Exception
 	{
 		overlayManager.add(overlay);
 		keyManager.registerKeyListener(hotkeyListener);
+		String r = configMan.getConfiguration("Death-Inventory", "items");
+		if (r == null) return;
+		String[] s = r.split("], \\[");
+		String[][] t = {s[0].replace("[", "").split(", "), s[1].replace("]", "").split(", ")};
+		for (int j = 0; j < 2; j++) {
+			for (int i = 0; i < t[0].length; i++) {
+				displayItems[j][i] = Integer.parseInt(t[j][i]);
+			}
+		}
+		getImageList();
 	}
 
 	@Override
@@ -78,66 +94,46 @@ public class DeathInventoryPlugin extends Plugin
 
 	@Subscribe
 	public void onStatChanged(StatChanged statChanged) {
-		if (statChanged.getSkill() == Skill.HITPOINTS) {
-			if (statChanged.getBoostedLevel() == 0 && playerDied) {
-				final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
-				if (itemContainer == null) {
-					return;
-				}
-				final Item[] items = itemContainer.getItems();
-				ditemIDs = new int[INVENTORY_SIZE];;
-				ditemQuantites = new int[INVENTORY_SIZE];;
-
-				for (int i = 0; i < INVENTORY_SIZE; i++) {
-					if (i < items.length) {
-						final Item item = items[i];
-
-						if (item.getQuantity() > 0) {
-							ditemIDs[i] = item.getId();
-							ditemQuantites[i] = item.getQuantity();
-						}
-					}
-				}
-			}
-			else if (statChanged.getLevel() == statChanged.getBoostedLevel()) {
-				if ( playerDied ) {
-					playerDied = false;
-					final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
-					if (itemContainer == null) {
-						return;
-					}
-					final Item[] items = itemContainer.getItems();
-					int[] itemIDs = new int[INVENTORY_SIZE];
-					int[] itemQuantites = new int[INVENTORY_SIZE];
-
-					for (int i = 0; i < INVENTORY_SIZE; i++) {
-						if (i < items.length) {
-							final Item item = items[i];
-
-							if (item.getQuantity() > 0) {
-								itemIDs[i] = item.getId();
-								itemQuantites[i] = item.getQuantity();
-							}
-						}
-					}
-					if (!Arrays.equals(itemIDs, ditemIDs) || !Arrays.equals(itemQuantites, ditemQuantites)) {
-						configMan.setConfiguration("Death-Inventory", "itemQuantites", Arrays.toString(ditemQuantites));
-						configMan.setConfiguration("Death-Inventory", "itemIDs", Arrays.toString(ditemIDs));
-						putState("0");
-						forceDisplayed = false;
-					}
-				}
+		if (statChanged.getSkill() != Skill.HITPOINTS || !playerDied) return;
+		if (statChanged.getBoostedLevel() == 0) {
+			deathItems = getInv();
+		} else if (statChanged.getLevel() == statChanged.getBoostedLevel()) {
+			playerDied = false;
+			respawnItems = getInv();
+			if (!Arrays.deepEquals(respawnItems, deathItems)) {
+				displayItems=deathItems;
+				configMan.setConfiguration("Death-Inventory", "items", Arrays.deepToString(displayItems));
+				getImageList();
+				putState("0");
+				forceDisplayed = false;
 			}
 		}
 	}
 
-	static int[] fromString(String string) {
-		String[] strings = string.replace("[", "").replace("]", "").split(", ");
-		int[] result = new int[strings.length];
-		for (int i = 0; i < result.length; i++) {
-			result[i] = Integer.parseInt(strings[i]);
+	private int[][] getInv() {
+		itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+		if (itemContainer == null) return null;
+		Item[] itemsArray = itemContainer.getItems();
+		int[][] items = new int[2][INVENTORY_SIZE];
+		for (int i = 0; i < itemsArray.length; i++) {
+			final Item item = itemsArray[i];
+			if (item.getQuantity() > 0) {
+				items[0][i] = item.getId();
+				items[1][i] = item.getQuantity();
+			}
 		}
-		return result;
+		return items;
+	}
+
+	private void getImageList() {
+		imageList = new ImageComponent[displayItems[0].length];
+		for (int i = 0; i < displayItems[0].length; i++) {
+			if (displayItems[1][i] > 0) {
+				imageList[i] = new ImageComponent(itemManager.getImage(displayItems[0][i], displayItems[1][i], displayItems[1][i] > 1));
+			} else {
+				imageList[i] = new ImageComponent(new BufferedImage(Constants.ITEM_SPRITE_WIDTH, Constants.ITEM_SPRITE_HEIGHT, BufferedImage.TYPE_4BYTE_ABGR));
+			}
+		}
 	}
 
 	void putState(String val) {

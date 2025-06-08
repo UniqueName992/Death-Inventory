@@ -1,18 +1,13 @@
 package com.DeathInventory;
 import java.awt.*;
 import java.awt.Point;
-import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import net.runelite.api.*;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.ComponentOrientation;
-import net.runelite.client.ui.overlay.components.ImageComponent;
 
 public class DeathInventoryOverlay extends OverlayPanel {
-    private static final ImageComponent PLACEHOLDER_IMAGE = new ImageComponent(
-            new BufferedImage(Constants.ITEM_SPRITE_WIDTH, Constants.ITEM_SPRITE_HEIGHT, BufferedImage.TYPE_4BYTE_ABGR));
-
     @Inject
     private DeathInventoryPlugin plugin;
 
@@ -28,12 +23,6 @@ public class DeathInventoryOverlay extends OverlayPanel {
 
     @Override
     public Dimension render(Graphics2D graphics) {
-
-        if (plugin.hotKey) {
-            plugin.hotKey = false;
-            plugin.forceDisplayed = !plugin.forceDisplayed;
-            if (plugin.forceDisplayed) { plugin.shown = !plugin.shouldShow(); }
-        }
 
         if (plugin.forceDisplayed && !plugin.shown) { return null; }
         if (!plugin.forceDisplayed && !plugin.shouldShow()) { return null; }

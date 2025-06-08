@@ -8,7 +8,6 @@ import net.runelite.api.*;
 import net.runelite.api.events.ActorDeath;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.widgets.ComponentID;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.events.WidgetClosed;
 import net.runelite.client.config.ConfigManager;
@@ -22,8 +21,6 @@ import net.runelite.api.ItemContainer;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.client.util.HotkeyListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
@@ -57,7 +54,6 @@ public class DeathInventoryPlugin extends Plugin
 	int[][] displayItems = new int[2][INVENTORY_SIZE];;
 	boolean forceDisplayed = false;
 	boolean shown = false;
-	boolean hotKey = false;
 	ImageComponent[] imageList;
 	@Inject
 	private ItemManager itemManager;
@@ -186,7 +182,8 @@ public class DeathInventoryPlugin extends Plugin
 		@Override
 		public void hotkeyPressed()
 		{
-			hotKey = true;;
+			forceDisplayed = !forceDisplayed;
+			if (forceDisplayed) shown = !shouldShow();
 		}
 	};
 }
